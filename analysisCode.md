@@ -685,7 +685,7 @@ def model_accuracy_check(index):
   print(X_test.shape)
 
   # loading previously built model
-  model3.load_weights('/content/drive/My Drive/Colab Notebooks/{}/best.tf'.format(index))
+  model.load_weights('/content/drive/My Drive/Colab Notebooks/{}/best.tf'.format(index))
   predicted_stock_price = model.predict(X_test)
   predicted_stock_price = sc.inverse_transform(predicted_stock_price)
 
