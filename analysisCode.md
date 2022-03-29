@@ -42,9 +42,6 @@ from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import r2_score
 
-# for change point detection
-import ruptures as rpt
-
 from dateutil.parser import parse 
 import pickle
 ```
@@ -527,4 +524,151 @@ def algo(country, start_date, end_date,num_pens, model_name='Binary Segementatio
 ```python
 # change the parameter index, Start date, End date, Model name to do the change point analysis
 algo(index, startDate, endDate, modelName)
+```
+
+# V. PREDICTION MODEL
+
+## A) Creating the Model
+
+
+```python
+def stockPrediction(index):
+  #splitting train and test set
+  training_set = df.loc[:6000, index].values.reshape(-1,1)
+  test_set = df.loc[6000:, index].values.reshape(-1,1)
+
+  # using min max scaler
+  sc = MinMaxScaler(feature_range = (0, 1))
+  training_set_scaled = sc.fit_transform(training_set)
+
+  # Creating a data structure with 60 time-steps and 1 output
+  X_train = []
+  y_train = []
+  for i in range(36, 6000):
+      X_train.append(training_set_scaled[i-36:i, 0])
+      y_train.append(training_set_scaled[i, 0])
+  X_train, y_train = np.array(X_train), np.array(y_train)
+  X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
+
+  # Define Sequential model with 9 layers
+  model = keras.Sequential(
+      [
+      layers.GRU(units = 50, return_sequences = True, input_shape = (X_train.shape[1], 1)),
+      layers.Dropout(0.2),
+      layers.GRU(units = 50, return_sequences = True),
+      layers.Dropout(0.2),
+      layers.GRU(units = 50, return_sequences = True),
+      layers.Dropout(0.2),
+      layers.GRU(units = 50),
+      layers.Dropout(0.2),
+      layers.Dense(units = 1)
+      ]
+  )
+
+  #compiling the model
+  model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3),
+                loss=tf.keras.losses.MeanSquaredError())
+  
+  # saving the best model
+  # following can be done only in a Colab environment
+  checkpoint = ModelCheckpoint('/content/drive/My Drive/Colab Notebooks/{}/best.tf'.format(index), monitor='loss', verbose=1, save_best_only=True, mode='min') 
+
+  # fitting the model
+  model.fit(X_train, y_train, epochs = 100, batch_size = 32, callbacks=[checkpoint])
+
+  dataset_train = df.loc[:6000, index]
+  dataset_test = df.loc[6000:, index]
+  dataset_total = pd.concat((dataset_train, dataset_test), axis = 0)
+  inputs = dataset_total[len(dataset_total) - len(dataset_test) - 36:].values
+  inputs = inputs.reshape(-1,1)
+  inputs = sc.transform(inputs)
+  X_test = []
+  for i in range(36, inputs.shape[0]):
+      X_test.append(inputs[i-36:i, 0])
+  X_test = np.array(X_test)
+  X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
+  print(X_test.shape)
+
+  # loading previously built model
+  # following can be done only in a Colab environment
+  model.load_weights('/content/drive/My Drive/Colab Notebooks/{}/best.tf'.format(index))
+  predicted_stock_price = model3.predict(X_test)
+  predicted_stock_price = sc.inverse_transform(predicted_stock_price)
+
+  #plotting the stock prices
+  plt.plot(df.loc[6000:, 'Date'],dataset_test.values, color = 'red', label = 'Real {} Stock Price'.format(index))
+  plt.plot(df.loc[6000:, 'Date'],predicted_stock_price, color = 'blue', label = 'Predicted {} Stock Price'.format(index))
+  plt.xticks(np.arange(0,inputs.shape[0],120),rotation=45)
+  plt.title('{} Stock Price Prediction'.format(index))
+  plt.xlabel('Time')
+  plt.ylabel('{} Stock Price'.format(index))
+  plt.legend()
+  plt.show()
+```
+
+## B) Checking Model Accuracy
+
+
+```python
+def model_accuracy_check(index):
+  #splitting train and test set
+  training_set = df.loc[:6000, index].values.reshape(-1,1)
+  test_set = df.loc[6000:, index].values.reshape(-1,1)
+
+  # using min max scaler
+  sc = MinMaxScaler(feature_range = (0, 1))
+  training_set_scaled = sc.fit_transform(training_set)
+
+  # Creating a data structure with 60 time-steps and 1 output
+  X_train = []
+  y_train = []
+  for i in range(36, 6000):
+      X_train.append(training_set_scaled[i-36:i, 0])
+      y_train.append(training_set_scaled[i, 0])
+  X_train, y_train = np.array(X_train), np.array(y_train)
+  X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
+
+  # Define Sequential model2 with 9 layers
+  model = keras.Sequential(
+      [
+      layers.GRU(units = 50, return_sequences = True, input_shape = (X_train.shape[1], 1)),
+      layers.Dropout(0.2),
+      layers.GRU(units = 50, return_sequences = True),
+      layers.Dropout(0.2),
+      layers.GRU(units = 50, return_sequences = True),
+      layers.Dropout(0.2),
+      layers.GRU(units = 50),
+      layers.Dropout(0.2),
+      layers.Dense(units = 1)
+      ]
+  )
+
+  #compiling the model
+  model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3),
+                loss=tf.keras.losses.MeanSquaredError())
+  
+
+
+  dataset_train = df.loc[:6000, index]
+  dataset_test = df.loc[6000:, index]
+  dataset_total = pd.concat((dataset_train, dataset_test), axis = 0)
+  inputs = dataset_total[len(dataset_total) - len(dataset_test) - 36:].values
+  inputs = inputs.reshape(-1,1)
+  inputs = sc.transform(inputs)
+  X_test = []
+  for i in range(36, inputs.shape[0]):
+      X_test.append(inputs[i-36:i, 0])
+  X_test = np.array(X_test)
+  X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
+  print(X_test.shape)
+
+  # loading previously built model
+  model3.load_weights('/content/drive/My Drive/Colab Notebooks/{}/best.tf'.format(index))
+  predicted_stock_price = model.predict(X_test)
+  predicted_stock_price = sc.inverse_transform(predicted_stock_price)
+
+  # evaluate the model accuracy
+  print('R Square of {}'.format(index),'\n',r2_score(dataset_test, predicted_stock_price))
+  print('Mean absolute error of {}'.format(index),'\n',mean_absolute_error(dataset_test, predicted_stock_price))
+  print('Mean squared error of {}'.format(index),'\n',mean_squared_error(dataset_test, predicted_stock_price),'\n','\n')
 ```
