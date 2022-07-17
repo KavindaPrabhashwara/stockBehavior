@@ -407,8 +407,8 @@ if __name__ == "__main__":
 def plotTrendandSeasonality(index):
     '''Funtion to plot the Trend and Seasonality'''
     fig, axes = plt.subplots(1, 2, figsize=(20,7), dpi= 200)
-    sns.boxplot(x='year', y=index, data=df, ax=axes[0])
-    sns.boxplot(x='month', y=index, data=df.loc[~df.year.isin([2000, 2021]), :])
+    sns.boxplot(x='year', y=index, data=dfTemp, ax=axes[0])
+    sns.boxplot(x='month', y=index, data=dfTemp.loc[~dfTemp.year.isin([2000, 2021]), :])
 
     # Set Title
     axes[0].set_title('Yearly Trend of {}'.format(index), fontsize=18)
